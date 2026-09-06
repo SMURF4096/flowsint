@@ -19,6 +19,7 @@ class FlowRead(ORMBase):
     description: Optional[str]
     category: Optional[List[str]]
     flow_schema: Optional[Dict[str, Any]]
+    owner_id: Optional[UUID4]
     created_at: datetime
     last_updated_at: datetime
 

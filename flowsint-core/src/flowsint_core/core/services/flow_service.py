@@ -43,7 +43,7 @@ class FlowService(BaseService):
         self, category: Optional[str], user_id: UUID
     ) -> List[Dict[str, Any]]:
         if not category or category.lower() == "undefined":
-            return self._flow_repo.get_all_with_optional_category(None)
+            return self._flow_repo.get_all_with_optional_category(None, user_id)
 
         # Check if category is a custom type
         custom_type = self._custom_type_repo.get_published_by_name_and_owner(
@@ -51,7 +51,7 @@ class FlowService(BaseService):
         )
 
         if custom_type:
-            flows = self._flow_repo.get_all_with_optional_category(None)
+            flows = self._flow_repo.get_all_with_optional_category(None, user_id)
             return []
             return [
                 {
@@ -61,12 +61,14 @@ class FlowService(BaseService):
                 for flow in flows
             ]
 
-        return self._flow_repo.get_all_with_optional_category(category)
+        return self._flow_repo.get_all_with_optional_category(category, user_id)
 
-    def get_by_id(self, flow_id: UUID) -> Flow:
+    def get_by_id(self, flow_id: UUID, user_id: UUID) -> Flow:
         flow = self._flow_repo.get_by_id(flow_id)
         if not flow:
             raise NotFoundError("Flow not found")
+        if flow.owner_id is not None and flow.owner_id != user_id:
+            raise PermissionDeniedError("Forbidden")
         return flow
 
     def create(
@@ -75,6 +77,7 @@ class FlowService(BaseService):
         description: Optional[str],
         category: List[str],
         flow_schema: Dict[str, Any],
+        owner_id: UUID,
     ) -> Flow:
         new_flow = Flow(
             id=uuid4(),
@@ -82,6 +85,7 @@ class FlowService(BaseService):
             description=description,
             category=category,
             flow_schema=flow_schema,
+            owner_id=owner_id,
             created_at=datetime.now(timezone.utc),
             last_updated_at=datetime.now(timezone.utc),
         )
@@ -90,10 +94,12 @@ class FlowService(BaseService):
         self._refresh(new_flow)
         return new_flow
 
-    def update(self, flow_id: UUID, updates: Dict[str, Any]) -> Flow:
+    def update(self, flow_id: UUID, user_id: UUID, updates: Dict[str, Any]) -> Flow:
         flow = self._flow_repo.get_by_id(flow_id)
         if not flow:
             raise NotFoundError("Flow not found")
+        if flow.owner_id != user_id:
+            raise PermissionDeniedError("Forbidden")
 
         for key, value in updates.items():
             if key == "category":
@@ -106,10 +112,12 @@ class FlowService(BaseService):
         self._refresh(flow)
         return flow
 
-    def delete(self, flow_id: UUID) -> None:
+    def delete(self, flow_id: UUID, user_id: UUID) -> None:
         flow = self._flow_repo.get_by_id(flow_id)
         if not flow:
             raise NotFoundError("Flow not found")
+        if flow.owner_id != user_id:
+            raise PermissionDeniedError("Forbidden")
 
         self._flow_repo.delete(flow)
         self._commit()

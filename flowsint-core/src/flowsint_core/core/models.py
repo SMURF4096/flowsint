@@ -211,6 +211,11 @@ class Flow(Base):
     flow_schema = mapped_column(JSON, nullable=True)
     created_at = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_updated_at = mapped_column(DateTime(timezone=True), server_default=func.now())
+    owner_id = mapped_column(
+        Uuid,
+        ForeignKey("profiles.id", onupdate="CASCADE", ondelete="SET NULL"),
+        nullable=True,
+    )
 
 
 class Analysis(Base):
