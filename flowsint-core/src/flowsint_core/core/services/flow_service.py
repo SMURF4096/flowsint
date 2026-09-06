@@ -16,7 +16,7 @@ from ..repositories import (
     SketchRepository,
 )
 from .base import BaseService
-from .exceptions import NotFoundError
+from .exceptions import NotFoundError, PermissionDeniedError
 
 
 class FlowService(BaseService):
